@@ -1,65 +1,118 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Menu.css';
 import { Container, Row, Col, Button } from 'react-bootstrap';
+import axios from 'axios';
 
 function Menu() {
-  // State to manage the selected menu category
-  const [selectedMenu, setSelectedMenu] = useState('FOOD');
+  const [items, setItems] = useState([]); // Store menu items
+  const [categories, setCategories] = useState([]); // Store categories
+  const [selectedCategory, setSelectedCategory] = useState(''); // Selected category name
+  const [selectedMenuId, setSelectedMenuId] = useState(''); // Selected menu ID
+  const [loading, setLoading] = useState(true); // Loading state
+  const [error, setError] = useState(''); // Error message state
 
-  // Define menu items for each category
-  const foodItems = [
-    { name: 'Pizza', price: '$12.99' },
-    { name: 'Burgers', price: '$8.99' },
-    { name: 'Pasta', price: '$10.99' },
-    { name: 'Salads', price: '$7.99' },
-    { name: 'Desserts', price: '$5.99' },
-  ];
+  // Fetch menu categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/menu'); // Adjust API URL if needed
+        const menuItems = response.data.menuItems; // Ensure backend returns menuItems array
 
-  const drinkItems = [
-    { name: 'Coke', price: '$2.99' },
-    { name: 'Pepsi', price: '$2.99' },
-    { name: 'Lemonade', price: '$3.99' },
-    { name: 'Water', price: '$1.99' },
-  ];
+        setCategories(menuItems);
 
-  const brunchItems = [
-    { name: 'Egg Sandwich', price: '$7.99' },
-    { name: 'Pancakes', price: '$5.99' },
-    { name: 'Omelette', price: '$8.99' },
-    { name: 'Coffee', price: '$2.50' },
-  ];
+        // Default to the first category
+        if (menuItems.length > 0) {
+          setSelectedCategory(menuItems[0].name);
+          setSelectedMenuId(menuItems[0].id);
+  
+        }
+        setError('');
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+        setError('Failed to load menu categories.');
+        setLoading(false);
+      }
+    };
 
-  // Determine the menu to display based on the selected category
-  let itemsToDisplay;
-  if (selectedMenu === 'FOOD') {
-    itemsToDisplay = foodItems;
-  } else if (selectedMenu === 'DRINKS') {
-    itemsToDisplay = drinkItems;
-  } else if (selectedMenu === 'BRUNCH') {
-    itemsToDisplay = brunchItems;
-  }
+    fetchCategories();
+  }, []);
+
+  // Fetch menu items when selectedMenuId changes
+  useEffect(() => {
+    const fetchMenuItems = async () => {
+      if (!selectedMenuId) return; // Avoid making requests if no ID is selected
+  
+      try {
+        setLoading(true);
+        
+        const response = await axios.get(`http://localhost:5000/api/menu/${selectedMenuId}/items`);
+        
+        setItems(response.data.items || []);
+        setError('');
+      } catch (err) {
+        if (err.response) {
+          if (err.response.status === 400) {
+            setError('Invalid menu ID.');
+          } else if (err.response.status === 404) {
+            setError('No items found for this menu.');
+          } else {
+            setError('Failed to load menu items.');
+          }
+        } else {
+          setError('Network error. Please try again.');
+        }
+        console.error('Error fetching menu items:', err);
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+  
+    fetchMenuItems();
+  }, [selectedMenuId]);
+  
 
   return (
     <div className="Listmenu">
+      {/* Menu Category Buttons */}
       <div className="menu">
-        <Button className='buttons'  onClick={() => setSelectedMenu('FOOD')}>FOOD</Button>
-        <Button  className='buttons' onClick={() => setSelectedMenu('DRINKS')}>DRINKS</Button>
-        <Button className='buttons' onClick={() => setSelectedMenu('BRUNCH')}>BRUNCH</Button>
+        {categories.map((category) => (
+          <Button
+            key={category._id}
+            className={`buttons ${selectedCategory === category.name ? 'active' : ''}`}
+            onClick={() => {
+              console.log("Selected Category:", category.name, "Selected Menu ID:", category._id);
+              setSelectedCategory(category.name); // Update selected category
+              setSelectedMenuId(category._id); // Update selected menu ID
+            }}
+          >
+            {category.name}
+          </Button>
+        ))}
       </div>
 
-      {/* New box div */}
       <Container>
-        {/* Box with menu items */}
         <Row className="justify-content-center">
           <Col md={6} className="box p-4">
-            <ul className="list-unstyled">
-              {itemsToDisplay.map((item, index) => (
-                <li key={index} className="menu-item">
-                  <span className="item-name">{item.name}</span>
-                  <span className="price">{item.price}</span>
-                </li>
-              ))}
-            </ul>
+            {loading ? (
+              <p className="text-white">Loading...</p>
+            ) : error ? (
+              <p className="text-danger">{error}</p>
+            ) : items.length > 0 ? (
+              <ul className="list-unstyled">
+                {items.map((item) => (
+                  <li key={item._menuId} className="menu-item">
+                    <span className="item-name text-white">{item.name}</span>
+                    <h6>{item.description}</h6>
+                    <span className="price text-white">{item.price}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-white">No items available for this category.</p>
+            )}
           </Col>
         </Row>
       </Container>

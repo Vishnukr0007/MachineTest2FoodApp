@@ -12,8 +12,8 @@ function Footer() {
           {/* First box: Connect with us */}
           <Col md={3} className="footer-box">
             <h3 className="fo-head">Connect With Us</h3>
-            <p>Email: info@example.com</p>
-            <p>Phone: +123 456 7890</p>
+            <p>Email: vishnukrishnankutty54@gmail.com</p>
+            <p>Phone: +91 6282899456</p>
           </Col>
 
           {/* Second box: Logo and social media icons */}
